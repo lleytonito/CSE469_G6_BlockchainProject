@@ -170,11 +170,13 @@ def init_command():
             #if the file is empty for some reason, add the initial block as specified in instructions
             else:
                 initialBlock = packFormatAll(True, '', time.time(), '', 0, 'INITIAL', 'Initial Block')
+            print('Blockchain file found with INITIAL block.')
 
     #if the file does not exist, create it and add the initial block as specified in instructions
     else:
         bcFile = open(filepath, 'wb')
         initialBlock = packFormatAll(True, '', time.time(), '', 0, 'INITIAL', 'Initial Block')
+        print('Blockchain file not found. Created INITIAL block.')
 
 #verify command implementation
 def verify_command():
