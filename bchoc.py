@@ -1,3 +1,5 @@
+import datetime
+import hashlib
 import struct
 import sys
 import argparse
@@ -32,7 +34,13 @@ def packFormatAll(writeToFile, prevHash, time, caseID, evidenceID, state, data):
         fileToWrite = open(filepath, 'ab')
         fileToWrite.write(newBlock)
         fileToWrite.close()
-    return newBlock
+
+    # we weren't using the return here for anything, 
+    # so I used the return statement to get the hash version of the block  
+    # to make prevHash easier
+    hash_object = hashlib.sha256(newBlock)
+    hex_dig = hash_object.hexdigest()
+    return hex_dig
 
 def unpackFromList(index):
     currentBlockFields = []
@@ -109,8 +117,69 @@ def add_command(args):
     except ValueError:
         print("Invalid UUID for case ID")
         return
+    
+    #offset used for reading more than 1 block from file when they exist
+    offset = 0
+    #check if the file specified by the check at the top of program exists
+    if (os.path.isfile(filepath)):
+        #if it does, open the file in read-binary mode
+        with open(filepath, 'rb') as file:
+            #create a bytearray to read in the file's data
+            existingBlocks = bytearray()
+            existingBlocks = file.read()
+            #check to see if the first block has a size greater than 0 (should be 14 if it is there)
+            bytesSize = existingBlocks[72:75]
+            size = (int.from_bytes(bytesSize, sys.byteorder))
 
-    print("Add Command\n Case ID:", args.case_id,"\n Item ID(s):", args.item_id)
+            #initialize array of itemIds with the first itemId (initial block will most likely be 0)
+            bytesItemId = existingBlocks[56:59]
+            itemId = [(int.from_bytes(bytesItemId, sys.byteorder))]
+            #if so, while the size of each block in the file is not 0
+            if (size != 0):
+                while (size != 0):
+                    #read the block from the file at the current offset into our arrays that store data structures
+                    unpackFromFile(existingBlocks, offset, size)
+                    #increment offset according to base size + size of data string at end of struct
+                    offset = offset + 75 + size
+                    
+                    #continue overwriting prevHex in order to get the hex of the most recent
+                    #element of the block
+                    hash = existingBlocks[offset:offset+75+size]
+                    hash_object = hashlib.sha256(hash)
+                    prevHex = hash_object.hexdigest()
+
+                    #get the new size for the next while loop check
+                    bytesSize = existingBlocks[offset+72:offset+75]
+                    size = (int.from_bytes(bytesSize, sys.byteorder))
+
+                    #append each itemId to the arraay
+                    bytesItemId = existingBlocks[offset+56:offset+59]
+                    itemId.append(int.from_bytes(bytesItemId, sys.byteorder))
+            
+        open(filepath, 'ab')
+        # Get the current timestamp in seconds
+        timestamp = time.time()
+        # Convert the timestamp to a datetime object in UTC timezone
+        dt = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+        # Format the datetime object as a string in the desired format
+        formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        #  for loop checks for matches between args.item_id and itemId.
+        for item in args.item_id:
+            # If the item is not in the block, add it to the block and print the required statement
+            if item not in itemId:
+                prevHex = packFormatAll(True, prevHex, time.time(), args.case_id, item, 'CHECKEDIN', 'TEST')
+                print(f'Added Item: {item}')
+                print(' Status: CHECKEDIN')
+                print(f' Time of Action: {formatted_time}')
+            # Else, do not add item to the block
+            else :
+                print(f'{item} is already in the block and will not be added.')
+
+
+    else :
+        print('Blockchain file not found. Please run init command to initialize the block.')
+    
     
 
 #checkout command implementation
@@ -191,7 +260,7 @@ subparsers = parser.add_subparsers(dest="command")
 #add command takes in two required arguments with flags '-c' and 'i', and '-i' can be taken more than once
 add_parser = subparsers.add_parser("add")
 add_parser.add_argument("-c", "--case_id", required=True, help="Specifies the case identifier that the evidence is associated with. Must be a valid UUID.")
-add_parser.add_argument("-i", "--item_id", action="append", required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
+add_parser.add_argument("-i", "--item_id", type=int, action="append", required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
 
 #checkout command takes in one required argument with flag '-i'.
 checkout_parser = subparsers.add_parser("checkout")
