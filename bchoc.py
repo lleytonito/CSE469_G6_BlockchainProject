@@ -223,46 +223,44 @@ def checkout_command(args):
                     #get the new size for the next while loop check
                     bytesSize = existingBlocks[offset+72:offset+75]
                     size = (int.from_bytes(bytesSize, sys.byteorder))
-            
-    else :
-        print('Blockchain file not found. Please run init command to initialize the block.')
-
-
-    #Iterate through blockList to verify whether a block can be checked out
-    i = 0
-    canCheckOut = False
-    currentBlockFields = [] #Contains fields for the current block being accessed
+        
+        #Iterate through blockList to verify whether a block can be checked out
+        i = 0
+        canCheckOut = False
+        currentBlockFields = [] #Contains fields for the current block being accessed
     
-    for i in range(blockList.size):
-       
-       #Get information about the current block being accessed and compare the item id with the argument provided
-       currentBlockFields = unpackFromList(i)   
+        for i in range(blockList.size):
+            
+            #Get information about the current block being accessed and compare the item id with the argument provided
+            currentBlockFields = unpackFromList(i)   
 
-       #Check if the current block is matching with the entered evidence id
-       if(currentBlockFields[3] == args.item_id):
-           matchingBlock = currentBlockFields
+            #Check if the current block is matching with the entered evidence id
+            if(currentBlockFields[3] == args.item_id):
+                matchingBlock = currentBlockFields
 
-            #Check for the current state of the evidence item. Only checked in evidence items can be checked out. 
-           if(matchingBlock[4] == "CHECKEDIN"):
-               canCheckOut = True
-           else:
-               canCheckOut = False
+                    #Check for the current state of the evidence item. Only checked in evidence items can be checked out. 
+                if(matchingBlock[4] == "CHECKEDIN"):
+                    canCheckOut = True
+                else:
+                    canCheckOut = False
 
-     #Check if the evidence item can be checked in or not
-    if(canCheckOut):
+        #Check if the evidence item can be checked in or not
+        if(canCheckOut):
 
-        #Output the Case ID, Evidence Item ID, Status, and Time of action
-        print("Case:", matchingBlock[2])                
-        print("\nChecked out item:", matchingBlock[3])  
-        print("\n  Status: CHECKEDOUT")
-        currentTime = time.time()
-        print("\n  Time of action:", currentTime)
+            #Output the Case ID, Evidence Item ID, Status, and Time of action
+            print("Case:", matchingBlock[2])                
+            print("\nChecked out item:", matchingBlock[3])  
+            print("\n  Status: CHECKEDOUT")
+            currentTime = time.time()
+            print("\n  Time of action:", currentTime)
 
-        #Adds the checkout entry to the chain of custody
-        packFormatAll(True, prevHex, currentTime, matchingBlock[2], matchingBlock[3], 'CHECKEDOUT', matchingBlock[6])
+            #Adds the checkout entry to the chain of custody
+            packFormatAll(True, prevHex, currentTime, matchingBlock[2], matchingBlock[3], 'CHECKEDOUT', matchingBlock[6])
 
+        else:
+            print("Error: Cannot check out a checked out item. Must check it in first.")
     else:
-        print("Error: Cannot check out a checked out item. Must check it in first.")
+        print('Blockchain file not found. Please run init command to initialize the block.')
 
 #checkin command implementation
 def checkin_command(args):
