@@ -90,7 +90,7 @@ def unpackFromList(index):
 #This function is used to read from the file in init
 def unpackFromFile(file, blockOffset, size):
     #Use size argument to find last index for specific block
-    lastIndex = (75+size)
+    lastIndex = (76+size)
     
     #this just simplifies later sections, each field is assigned its own bytes variable for conversion
     bytesPrevHash = bytes(file[0:blockOffset+31])
@@ -108,11 +108,71 @@ def unpackFromFile(file, blockOffset, size):
     caseID = (bytesCaseID.decode('utf-8'))
     evidenceID = (int.from_bytes(bytesEvidenceID, sys.byteorder))
     state = (bytesState.decode('utf-8'))
-    size = (int.from_bytes(bytesSize, sys.byteorder))
+    size = (int.from_bytes(bytesSize, sys.byteorder))+1
     data = (bytesData.decode())
 
     #Pass arguments to packFormatAll with writeToFile = False so the objects are not duplicated in the file
     packFormatAll(False, prevHash, time, caseID, evidenceID, state, data)
+        
+def generateLists():
+    offset = 0
+    with open(filepath, 'rb') as file:
+        #create a bytearray to read in the file's data
+        existingBlocks = bytearray()
+        existingBlocks = file.read()
+        #check to see if the first block has a size greater than 0 (should be 14 if it is there)
+        bytesSize = existingBlocks[72:75]
+        size = (int.from_bytes(bytesSize, sys.byteorder))
+        #if so, while the size of each block in the file is not 0
+        if (size != 0):
+            while (size != 0):
+                #read the block from the file at the current offset into our arrays that store data structures
+                unpackFromFile(existingBlocks, offset, size)
+                #increment offset according to base size + size of data string at end of struct
+                offset = offset + 75 + size
+                #get the new size for the next while loop check
+                bytesSize = existingBlocks[offset+72:offset+75]
+                size = (int.from_bytes(bytesSize, sys.byteorder))
+
+def writeToFile():
+    counter = 0
+    with open(filepath, 'wb') as file:
+        for item in blockList:
+            file.write(item)
+    file.close()
+
+def getPrevHash(index):
+    return unpackFromList(index)[0]
+
+def getTime(index):
+    return unpackFromList(index)[1]
+
+def getCaseID(index):
+    return unpackFromList(index)[2]
+
+def getEvidenceID(index):
+    return unpackFromList(index)[3]
+
+def getState(index):
+    return unpackFromList(index)[4]
+
+def getSize(index):
+    return unpackFromList(index)[5]
+
+def getData(index):
+    return unpackFromList(index)[6]
+
+def verifyPrevHash(index):
+    if (index == 0):
+        return True
+    else:
+        prevHashActual = getPrevHash(index-1)
+        prevHashStored = getPrevHash(index)
+        if (prevHashActual == prevHashStored):
+            return True
+        else:
+            return False
+
 
 ###################################################################################################
 
@@ -336,6 +396,8 @@ def init_command():
         bcFile = open(filepath, 'wb')
         initialBlock = packFormatAll(True, '', time.time(), '', 0, 'INITIAL', 'Initial Block')
         print('Blockchain file not found. Created INITIAL block.')
+
+    writeToFile()
 
 #verify command implementation
 def verify_command():
