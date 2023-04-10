@@ -27,8 +27,15 @@ def packFormatAll(writeToFile, prevHash, time, caseID, evidenceID, state, data):
     currentBlockFormat = packFormatHeader + ' ' + str(dataLength) + 's'
     #append the new format to formatList
     formatList.append(currentBlockFormat)
+
+    #hex to bytes
+    byteHex = bytes.fromhex(prevHash)
+
+    #data to utf-8 bytes
+    byteData = data.encode()
+    print(byteData)
     #create a new byte struct of the specified format, and append it to blockList. also return in case it needs immediate use
-    newBlock = struct.pack(currentBlockFormat, bytes(prevHash, 'utf-8'), time, bytes(caseID, 'utf-8'), evidenceID, bytes(state, 'utf-8'), dataLength, bytes(data, 'utf-8'))
+    newBlock = struct.pack(currentBlockFormat, byteHex, time, bytes(caseID, 'utf-8'), evidenceID, bytes(state, 'utf-8'), dataLength, byteData)
     blockList.append(newBlock)
     if (writeToFile):
         fileToWrite = open(filepath, 'ab')
@@ -41,6 +48,7 @@ def packFormatAll(writeToFile, prevHash, time, caseID, evidenceID, state, data):
     hash_object = hashlib.sha256(newBlock)
     hex_dig = hash_object.hexdigest()
     return hex_dig
+
 
 def unpackFromList(index):
     currentBlockFields = []
@@ -60,13 +68,13 @@ def unpackFromList(index):
 
 
     #convert to human-readable format for each field
-    prevHash = (bytesPrevHash.decode('utf-8'))
+    prevHash = bytesPrevHash.hex()
     time = ((struct.unpack('d', bytesTime))[0])
     caseID = (bytesCaseID.decode('utf-8'))
     evidenceID = (int.from_bytes(bytesEvidenceID, sys.byteorder))
     state = (bytesState.decode('utf-8'))
     size = (int.from_bytes(bytesSize, sys.byteorder))
-    data = (bytesData.decode('utf-8'))
+    data = (bytesData.decode())
 
     #add all of these fields to a list and then return it (not sure what we should really be doing here so I thought this was a good placeholder)
     currentBlockFields.append(prevHash)
@@ -95,13 +103,13 @@ def unpackFromFile(file, blockOffset, size):
 
 
     #convert to human-readable format for each field
-    prevHash = (bytesPrevHash.decode('utf-8'))
+    prevHash = bytesPrevHash.hex()
     time = ((struct.unpack('d', bytesTime))[0])
     caseID = (bytesCaseID.decode('utf-8'))
     evidenceID = (int.from_bytes(bytesEvidenceID, sys.byteorder))
     state = (bytesState.decode('utf-8'))
     size = (int.from_bytes(bytesSize, sys.byteorder))
-    data = (bytesData.decode('utf-8'))
+    data = (bytesData.decode())
 
     #Pass arguments to packFormatAll with writeToFile = False so the objects are not duplicated in the file
     packFormatAll(False, prevHash, time, caseID, evidenceID, state, data)
@@ -155,6 +163,7 @@ def add_command(args):
                     #append each itemId to the arraay
                     bytesItemId = existingBlocks[offset+56:offset+59]
                     itemId.append(int.from_bytes(bytesItemId, sys.byteorder))
+
             
         open(filepath, 'ab')
         # Get the current timestamp in seconds
@@ -168,10 +177,11 @@ def add_command(args):
         for item in args.item_id:
             # If the item is not in the block, add it to the block and print the required statement
             if item not in itemId:
-                prevHex = packFormatAll(True, prevHex, time.time(), args.case_id, item, 'CHECKEDIN', 'TEST')
+                prevHex = packFormatAll(True, prevHex, time.time(), args.case_id, item, 'CHECKEDIN', 'adding')
                 print(f'Added Item: {item}')
                 print(' Status: CHECKEDIN')
                 print(f' Time of Action: {formatted_time}')
+                print(prevHex)
             # Else, do not add item to the block
             else :
                 print(f'{item} is already in the block and will not be added.')
@@ -268,6 +278,10 @@ def checkin_command(args):
 
 #log command implementation
 def log_command(args):
+    print("FORMAT LIST")
+    print (formatList)
+    print("BLOCK LIST")
+    print (blockList)
     print("Log Command\n Reverse:", args.reverse)
     if args.num_entries:
         print(" Number of Entries:", args.num_entries)
