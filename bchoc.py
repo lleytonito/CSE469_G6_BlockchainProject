@@ -33,7 +33,7 @@ def packFormatAll(writeToFile, prevHash, time, caseID, evidenceID, state, data):
 
     #data to utf-8 bytes
     byteData = data.encode()
-    print(byteData)
+
     #create a new byte struct of the specified format, and append it to blockList. also return in case it needs immediate use
     newBlock = struct.pack(currentBlockFormat, byteHex, time, bytes(caseID, 'utf-8'), evidenceID, bytes(state, 'utf-8'), dataLength, byteData)
     blockList.append(newBlock)
@@ -65,7 +65,6 @@ def unpackFromList(index):
     bytesState = bytes(currentBlock[60:71])
     bytesSize = bytes(currentBlock[72:75])
     bytesData = bytes(currentBlock[76:lastIndex])
-
 
     #convert to human-readable format for each field
     prevHash = bytesPrevHash.hex()
@@ -141,6 +140,11 @@ def writeToFile():
             file.write(item)
     file.close()
 
+def getHash(index):
+    hash_object = hashlib.sha256(blockList[index])
+    hex_dig = hash_object.hexdigest()
+    return hex_dig
+
 def getPrevHash(index):
     return unpackFromList(index)[0]
 
@@ -163,15 +167,17 @@ def getData(index):
     return unpackFromList(index)[6]
 
 def verifyPrevHash(index):
+    prevHashStored = getPrevHash(index)
     if (index == 0):
+        prevHashActual = bytes.fromhex('')
+        prevHashActual = prevHashActual.hex()
+    else:
+        prevHashActual = getHash(index-1)
+        
+    if (prevHashActual == prevHashStored):
         return True
     else:
-        prevHashActual = getPrevHash(index-1)
-        prevHashStored = getPrevHash(index)
-        if (prevHashActual == prevHashStored):
-            return True
-        else:
-            return False
+        return False
 
 
 ###################################################################################################
