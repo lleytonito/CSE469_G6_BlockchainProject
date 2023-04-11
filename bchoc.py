@@ -41,7 +41,6 @@ def packFormatAll(writeToFile, prevHash, time, caseID, evidenceID, state, data):
         fileToWrite = open(filepath, 'ab')
         fileToWrite.write(newBlock)
         fileToWrite.close()
-
     # we weren't using the return here for anything, 
     # so I used the return statement to get the hash version of the block  
     # to make prevHash easier
@@ -108,7 +107,7 @@ def unpackFromFile(file, blockOffset, size):
     evidenceID = (int.from_bytes(bytesEvidenceID, sys.byteorder))
     state = (bytesState.decode('utf-8'))
     size = (int.from_bytes(bytesSize, sys.byteorder))+1
-    data = (bytesData.decode())
+    data = (bytesData.decode('utf-8'))
 
     #Pass arguments to packFormatAll with writeToFile = False so the objects are not duplicated in the file
     packFormatAll(False, prevHash, time, caseID, evidenceID, state, data)
@@ -128,7 +127,7 @@ def generateLists():
                 #read the block from the file at the current offset into our arrays that store data structures
                 unpackFromFile(existingBlocks, offset, size)
                 #increment offset according to base size + size of data string at end of struct
-                offset = offset + 75 + size
+                offset = offset + 76 + size
                 #get the new size for the next while loop check
                 bytesSize = existingBlocks[offset+72:offset+75]
                 size = (int.from_bytes(bytesSize, sys.byteorder))
@@ -387,7 +386,7 @@ def init_command():
                     #read the block from the file at the current offset into our arrays that store data structures
                     unpackFromFile(existingBlocks, offset, size)
                     #increment offset according to base size + size of data string at end of struct
-                    offset = offset + 75 + size
+                    offset = offset + 76 + size
                     #get the new size for the next while loop check
                     bytesSize = existingBlocks[offset+72:offset+75]
                     size = (int.from_bytes(bytesSize, sys.byteorder))
