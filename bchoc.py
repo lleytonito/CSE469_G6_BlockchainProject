@@ -205,6 +205,10 @@ def add_command(args):
         print("Invalid UUID for case ID")
         return
     
+    if not os.path.isfile(filepath):
+        print('Blockchain file not found. Please run init command to initialize the block.')
+        return
+
     generateLists()
     prevHex = getPrevHash()
     itemId = getEvidenceIDArray()
@@ -231,8 +235,6 @@ def add_command(args):
             print(f'{item} is already in the block and will not be added.')
 
 
-    else :
-        print('Blockchain file not found. Please run init command to initialize the block.')
     
     
 
