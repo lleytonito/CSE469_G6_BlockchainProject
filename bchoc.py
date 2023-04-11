@@ -189,8 +189,10 @@ def verifyPrevHash(index):
 
 def getPrevHash():
     size = len(blockList)
-    prevHash = getCurrentHash(size-1)
-    return prevHash
+    hash_object = hashlib.sha256(blockList[size-1])
+    hex_dig = hash_object.hexdigest()
+    return hex_dig
+   
 
 ###################################################################################################
 
