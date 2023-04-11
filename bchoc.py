@@ -1,3 +1,4 @@
+import binascii
 import datetime
 import hashlib
 import struct
@@ -35,7 +36,7 @@ def packFormatAll(writeToFile, prevHash, time, caseID, evidenceID, state, data):
     byteData = data.encode()
 
     #create a new byte struct of the specified format, and append it to blockList. also return in case it needs immediate use
-    newBlock = struct.pack(currentBlockFormat, byteHex, time, bytes(caseID, 'utf-8'), evidenceID, bytes(state, 'utf-8'), dataLength, byteData)
+    newBlock = struct.pack(currentBlockFormat, byteHex, time, bytes.fromhex(caseID), evidenceID, bytes(state, 'utf-8'), dataLength, byteData)
     blockList.append(newBlock)
     if (writeToFile):
         fileToWrite = open(filepath, 'ab')
@@ -57,18 +58,18 @@ def unpackFromList(index):
     lastIndex = len(currentBlock)
 
     #this just simplifies later sections, each field is assigned its own bytes variable for conversion
-    bytesPrevHash = bytes(currentBlock[0:31])
+    bytesPrevHash = bytes(currentBlock[0:32])
     bytesTime = bytes(currentBlock[32:40])
     bytesCaseID = bytes(currentBlock[40:56])
-    bytesEvidenceID = bytes(currentBlock[56:59])
-    bytesState = bytes(currentBlock[60:71])
-    bytesSize = bytes(currentBlock[72:75])
+    bytesEvidenceID = bytes(currentBlock[56:60])
+    bytesState = bytes(currentBlock[60:72])
+    bytesSize = bytes(currentBlock[72:76])
     bytesData = bytes(currentBlock[76:lastIndex])
 
     #convert to human-readable format for each field
     prevHash = bytesPrevHash.hex()
     time = ((struct.unpack('d', bytesTime))[0])
-    caseID = (bytesCaseID.decode('utf-8'))
+    caseID = bytesCaseID.hex()
     evidenceID = (int.from_bytes(bytesEvidenceID, sys.byteorder))
     state = (bytesState.decode('utf-8'))
     size = (int.from_bytes(bytesSize, sys.byteorder))
@@ -90,24 +91,24 @@ def unpackFromFile(file, blockOffset, size):
     lastIndex = (76+size)
     
     #this just simplifies later sections, each field is assigned its own bytes variable for conversion
-    bytesPrevHash = bytes(file[blockOffset:blockOffset+31])
+    bytesPrevHash = bytes(file[blockOffset:blockOffset+32])
     bytesTime = bytes(file[blockOffset+32:blockOffset+40])
     bytesCaseID = bytes(file[blockOffset+40:blockOffset+56])
-    bytesEvidenceID = bytes(file[blockOffset+56:blockOffset+59])
-    bytesState = bytes(file[blockOffset+60:blockOffset+71])
-    bytesSize = bytes(file[blockOffset+72:blockOffset+75])
+    bytesEvidenceID = bytes(file[blockOffset+56:blockOffset+60])
+    bytesState = bytes(file[blockOffset+60:blockOffset+72])
+    bytesSize = bytes(file[blockOffset+72:blockOffset+76])
     bytesData = bytes(file[blockOffset+76:blockOffset+lastIndex])
 
 
     #convert to human-readable format for each field
     prevHash = bytesPrevHash.hex()
     time = ((struct.unpack('d', bytesTime))[0])
-    caseID = (bytesCaseID.decode('utf-8'))
+    caseID = bytesCaseID.hex()
     evidenceID = (int.from_bytes(bytesEvidenceID, sys.byteorder))
     state = (bytesState.decode('utf-8'))
     size = (int.from_bytes(bytesSize, sys.byteorder))+1
     data = (bytesData.decode('utf-8'))
-
+    
     #Pass arguments to packFormatAll with writeToFile = False so the objects are not duplicated in the file
     packFormatAll(False, prevHash, time, caseID, evidenceID, state, data)
         
@@ -118,7 +119,7 @@ def generateLists():
         existingBlocks = bytearray()
         existingBlocks = file.read()
         #check to see if the first block has a size greater than 0 (should be 14 if it is there)
-        bytesSize = existingBlocks[72:75]
+        bytesSize = existingBlocks[72:76]
         size = (int.from_bytes(bytesSize, sys.byteorder))
         #if so, while the size of each block in the file is not 0
         if (size != 0):
@@ -150,7 +151,9 @@ def getTime(index):
     return unpackFromList(index)[1]
 
 def getCaseID(index):
-    return unpackFromList(index)[2]
+    unformattedCaseID = unpackFromList(index)[2]
+    formattedCaseID = unformattedCaseID[0:8] + '-' + unformattedCaseID[8:12] + '-' + unformattedCaseID[12:16] + '-' + unformattedCaseID[16:20] + '-' + unformattedCaseID[20:32]
+    return formattedCaseID
 
 def getEvidenceID(index):
     return unpackFromList(index)[3]
@@ -224,7 +227,8 @@ def add_command(args):
     for item in args.item_id:
         # If the item is not in the block, add it to the block and print the required statement
         if item not in itemId:
-            prevHex = packFormatAll(True, prevHex, time.time(), args.case_id, item, 'CHECKEDIN', 'adding')
+            formatted_case_id = args.case_id.replace('-', '')
+            prevHex = packFormatAll(True, prevHex, time.time(), formatted_case_id, item, 'CHECKEDIN', 'adding')
             print(f'Added Item: {item}')
             print(' Status: CHECKEDIN')
             print(f' Time of Action: {formatted_time}')
@@ -323,6 +327,9 @@ def checkin_command(args):
 
 #log command implementation
 def log_command(args):
+    #added this as it'll probably be needed later
+    generateLists()
+    
     print("FORMAT LIST")
     print (formatList)
     print("BLOCK LIST")
@@ -393,7 +400,7 @@ def init_command():
                     size = (int.from_bytes(bytesSize, sys.byteorder))
             #if the file is empty for some reason, add the initial block as specified in instructions
             else:
-                initialBlock = packFormatAll(True, '', time.time(), '', 0, 'INITIAL', 'Initial Block')
+                initialBlock = packFormatAll(True, '', time.time(), '00000000000000000000000000000000', 0, 'INITIAL', 'Initial Block')
             print('Blockchain file found with INITIAL block.')
 
     #if the file does not exist, create it and add the initial block as specified in instructions
