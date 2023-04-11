@@ -59,7 +59,7 @@ def unpackFromList(index):
     #this just simplifies later sections, each field is assigned its own bytes variable for conversion
     bytesPrevHash = bytes(currentBlock[0:31])
     bytesTime = bytes(currentBlock[32:40])
-    bytesCaseID = bytes(currentBlock[40:55])
+    bytesCaseID = bytes(currentBlock[40:56])
     bytesEvidenceID = bytes(currentBlock[56:59])
     bytesState = bytes(currentBlock[60:71])
     bytesSize = bytes(currentBlock[72:75])
@@ -82,7 +82,6 @@ def unpackFromList(index):
     currentBlockFields.append(state)
     currentBlockFields.append(size)
     currentBlockFields.append(data)
-
     return currentBlockFields
 
 #This function is used to read from the file in init
@@ -91,9 +90,9 @@ def unpackFromFile(file, blockOffset, size):
     lastIndex = (76+size)
     
     #this just simplifies later sections, each field is assigned its own bytes variable for conversion
-    bytesPrevHash = bytes(file[0:blockOffset+31])
+    bytesPrevHash = bytes(file[blockOffset:blockOffset+31])
     bytesTime = bytes(file[blockOffset+32:blockOffset+40])
-    bytesCaseID = bytes(file[blockOffset+40:blockOffset+55])
+    bytesCaseID = bytes(file[blockOffset+40:blockOffset+56])
     bytesEvidenceID = bytes(file[blockOffset+56:blockOffset+59])
     bytesState = bytes(file[blockOffset+60:blockOffset+71])
     bytesSize = bytes(file[blockOffset+72:blockOffset+75])
