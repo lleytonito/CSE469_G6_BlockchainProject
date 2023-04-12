@@ -240,86 +240,59 @@ def add_command(args):
 
     
     
-
 #Add a new checkout entry to the chain of custody for the given evidence item. Checkout actions may only be 
 #performed on evidence items that have already been added to the blockchain.
 def checkout_command(args):
     
-    #Offset used for reading a block from the file
-    offset = 0
-    prevHex = ''
-    #check if the file specified by the check at the top of program exists
-    if (os.path.isfile(filepath)):
-
-        #if it does, open the file in read-binary mode
-        with open(filepath, 'rb') as file:
-
-            #create a bytearray to read in the file's data
-            existingBlocks = bytearray()
-            existingBlocks = file.read()
-
-            #check to see if the first block has a size greater than 0 (should be 14 if it is there)
-            bytesSize = existingBlocks[72:75]
-            size = (int.from_bytes(bytesSize, sys.byteorder))
-        
-            #if so, while the size of each block in the file is not 0
-            if (size != 0):
-                while (size != 0):
-
-                    #Read the block of given size from the file at the current offset the block from the file
-                    #at the current offset into the blockList array  
-                    unpackFromFile(existingBlocks, offset, size)
-                    
-                    #increment offset according to base size + size of data string at end of struct
-                    offset = offset + 75 + size
-                    
-                    #continue overwriting prevHex in order to get the hex of the most recent
-                    #element of the block
-                    hash = existingBlocks[offset:offset+75+size]
-                    hash_object = hashlib.sha256(hash)
-                    prevHex = hash_object.hexdigest()
-
-                    #get the new size for the next while loop check
-                    bytesSize = existingBlocks[offset+72:offset+75]
-                    size = (int.from_bytes(bytesSize, sys.byteorder))
-        
-        #Iterate through blockList to verify whether a block can be checked out
-        i = 0
-        canCheckOut = False
-        currentBlockFields = [] #Contains fields for the current block being accessed
-    
-        for i in range(blockList.size):
-            
-            #Get information about the current block being accessed and compare the item id with the argument provided
-            currentBlockFields = unpackFromList(i)   
-
-            #Check if the current block is matching with the entered evidence id
-            if(currentBlockFields[3] == args.item_id):
-                matchingBlock = currentBlockFields
-
-                    #Check for the current state of the evidence item. Only checked in evidence items can be checked out. 
-                if(matchingBlock[4] == "CHECKEDIN"):
-                    canCheckOut = True
-                else:
-                    canCheckOut = False
-
-        #Check if the evidence item can be checked in or not
-        if(canCheckOut):
-
-            #Output the Case ID, Evidence Item ID, Status, and Time of action
-            print("Case:", matchingBlock[2])                
-            print("\nChecked out item:", matchingBlock[3])  
-            print("\n  Status: CHECKEDOUT")
-            currentTime = time.time()
-            print("\n  Time of action:", currentTime)
-
-            #Adds the checkout entry to the chain of custody
-            packFormatAll(True, prevHex, currentTime, matchingBlock[2], matchingBlock[3], 'CHECKEDOUT', matchingBlock[6])
-
-        else:
-            print("Error: Cannot check out a checked out item. Must check it in first.")
-    else:
+    #Check if the file specified by the datapath exists
+    if not os.path.isfile(filepath):
         print('Blockchain file not found. Please run init command to initialize the block.')
+        return
+    
+    #Get the list of blocks read from the file as well as the hash of the last block currently in the list
+    generateLists()
+    prevHex = getPrevHash()
+
+    #Iterate through blockList to verify whether a block with the provided evidence id can be checked out
+    i = 0
+    canCheckOut = False
+    currentBlockFields = [] #Contains fields for the current block being accessed
+    matchingBlock = []      #Contains fields for a block that is matching based on the id provided by the argument
+    
+    listLength = len(blockList)
+    for i in range(listLength):
+
+        currentBlockFields = unpackFromList(i)  #Get information about current block to compare id with the argument provided
+        if currentBlockFields[3] == args.item_id:
+            
+            matchingBlock = currentBlockFields
+            #Check if the matching block's status is checked in. If it is not, then it cannot be checked out
+            if currentBlockFields[4] == "CHECKEDIN":
+                canCheckOut = True
+            else:
+                canCheckOut = False
+
+    if canCheckOut:
+
+        #Output the Case ID, Evidence Item ID, Status, and Time of action
+        print("Case:", matchingBlock[2])                
+        print("Checked out item:", matchingBlock[3])  
+        print("  Status: CHECKEDOUT")
+
+        # Get the current timestamp in seconds
+        timestamp = time.time()
+        # Convert the timestamp to a datetime object in UTC timezone
+        dt = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+        # Format the datetime object as a string in the desired format
+        formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        print("  Time of action:", formatted_time)
+        
+        #Adds the checkout entry to the chain of custody
+        packFormatAll(True, prevHex, time.time(), matchingBlock[2], matchingBlock[3], 'CHECKEDOUT', matchingBlock[6])
+
+    else:
+        print("Error: Cannot check out a checked out item. Must check it in first.")
 
 #checkin command implementation
 def checkin_command(args):
@@ -327,20 +300,103 @@ def checkin_command(args):
 
 #log command implementation
 def log_command(args):
+
     #added this as it'll probably be needed later
     generateLists()
-    
-    print("FORMAT LIST")
-    print (formatList)
-    print("BLOCK LIST")
-    print (blockList)
-    print("Log Command\n Reverse:", args.reverse)
+    global blockList
+
+    #Output is given in reverse order (newest entries first)
+    if args.reverse:
+        blockList.reverse()
+
+    listSize = len(blockList)    
+
+    currentBlock = unpackFromList(0)
+    #Check for if there is there is a provided number of entries outputted
+    numEntries = 0
     if args.num_entries:
-        print(" Number of Entries:", args.num_entries)
-    if args.case_id:
-        print(" Case ID:", args.case_id)
-    if args.item_id:
-        print(" Item ID:", args.item_id)
+        
+        for i in range(listSize):
+            
+            #Required amount of outputted blocks has been reached
+            if numEntries == args.num_entries:
+                return
+            else:
+                currentBlock = unpackFromList(i)
+                #Get formatted time for the current block
+                dt = datetime.datetime.fromtimestamp(currentBlock[1], tz=datetime.timezone.utc)
+                formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+                #A desired Case ID or Item ID is not specified, print the current block
+                if args.case_id is None and args.item_id is None:
+                    print("Case:", currentBlock[2])
+                    print("Item:", currentBlock[3])
+                    print("Action:", currentBlock[4])
+                    print("Time:", formatted_time)                   
+                    print("")
+                    numEntries += 1 #The number of logged blocks has increased
+                else:
+                    canBeLogged = False
+
+                    #Checking for both Case ID and Item ID
+                    if args.case_id and args.item_id:
+                        if(currentBlock[2] == args.case_id and currentBlock[3] == args.item_id):
+                            canBeLogged = True
+                    #Check for only looking for Case ID
+                    elif args.case_id and args.item_id is None:
+                        if(currentBlock[2] == args.case_id):
+                            canBeLogged = True
+                    #Check for only looking for Item ID
+                    elif args.case_id is None and args.item_id:
+                        if(currentBlock[3] == args.item_id):
+                            canBeLogged = True
+                    
+                    if canBeLogged == True:
+                        print("Case:", currentBlock[2])
+                        print("Item:", currentBlock[3])
+                        print("Action:", currentBlock[4])
+                        print("Time:", formatted_time)
+                        print("")
+                        numEntries += 1 #The number of logged blocks has increased
+                    
+    #Print all blocks that match specification (no limit on number of blocks printed)
+    else:
+        for i in range(listSize):
+            
+            currentBlock = unpackFromList(i)
+            #Get formatted time for the current block
+            dt = datetime.datetime.fromtimestamp(currentBlock[1], tz=datetime.timezone.utc)
+            formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            #A desired Case ID or Item ID is not specified, print the current block
+            if args.case_id is None and args.item_id is None:
+                print("Case:", currentBlock[2])
+                print("Item:", currentBlock[3])
+                print("Action:", currentBlock[4])
+                print("Time:", formatted_time)    
+                print("")
+                numEntries += 1 #The number of logged blocks has increased
+            else:
+                canBeLogged = False
+
+                #Checking for both Case ID and Item ID
+                if args.case_id and args.item_id:
+                    if(currentBlock[2] == args.case_id and currentBlock[3] == args.item_id):
+                        canBeLogged = True
+                #Check for only looking for Case ID
+                elif args.case_id and args.item_id is None:
+                    if(currentBlock[2] == args.case_id):
+                        canBeLogged = True
+                #Check for only looking for Item ID
+                elif args.case_id is None and args.item_id:
+                    if(currentBlock[3] == args.item_id):
+                        canBeLogged = True
+                    
+                if canBeLogged == True:
+                    print("Case:", currentBlock[2])
+                    print("Item:", currentBlock[3])
+                    print("Action:", currentBlock[4])
+                    print("Time:", formatted_time)    
+                    print("")
 
 #remove command implementation
 def remove_command(args):    
