@@ -212,6 +212,7 @@ def add_command(args):
     generateLists()
     prevHex = getPrevHash()
     itemId = getEvidenceIDArray()
+   
 
     open(filepath, 'ab')
     # Get the current timestamp in seconds
@@ -229,13 +230,14 @@ def add_command(args):
             print(f'Added Item: {item}')
             print(' Status: CHECKEDIN')
             print(f' Time of Action: {formatted_time}')
-            print(prevHex)
         # Else, do not add item to the block
         else :
             print(f'{item} is already in the block and will not be added.')
 
 
-    
+    generateLists()
+    itemId = getEvidenceIDArray()
+    print(f'Evidence IDs in the block: {itemId}')
     
 
 #Add a new checkout entry to the chain of custody for the given evidence item. Checkout actions may only be 
@@ -346,7 +348,6 @@ def remove_command(args):
     itemId = getEvidenceIDArray()
     
     matchingIndex = None
-
     for i,element in enumerate(itemId):
         if element == args.item_id:
             matchingIndex = i
@@ -358,14 +359,21 @@ def remove_command(args):
     
     caseId = getCaseID(matchingIndex)
     prevHash = getPrevHash()
-    timeStamp = time.time()
-    packFormatAll(True, prevHash, timeStamp, caseId, args.item_id, args.reason, 'removing')
+    # Get the current timestamp in seconds
+    timestamp = time.time()
+    # Convert the timestamp to a datetime object in UTC timezone
+    dt = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+    # Format the datetime object as a string in the desired format
+    formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+    packFormatAll(True, prevHash, timestamp, caseId, args.item_id, args.reason, 'removing')
     print(f"Case: {caseId}")
     print(f"Removed Item: {args.item_id}")
     print(f" Status: {args.reason}")
     if args.owner:
         print(f"Owner Info: {args.owner}")
-    print(f"Time of Action: {timeStamp}")
+  
+  #TODO: can only dispose a checkedin item, write a checkState global function
 
 
 #init command implementation
@@ -422,11 +430,11 @@ add_parser.add_argument("-i", "--item_id", type=int, action="append", required=T
 
 #checkout command takes in one required argument with flag '-i'.
 checkout_parser = subparsers.add_parser("checkout")
-checkout_parser.add_argument("-i", "--item_id", required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
+checkout_parser.add_argument("-i", "--item_id",type=int, required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
 
 #checkin command takes in one required argument with flag '-i'.
 checkin_parser = subparsers.add_parser("checkin")
-checkin_parser.add_argument("-i", "--item_id", required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
+checkin_parser.add_argument("-i", "--item_id",type=int, required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
 
 #log command takes in four optional arguments: '-r', '-n', '-c', and '-i'. 
 # To add implementation for the reverse command, use ( if args["reverse"]: )
@@ -438,7 +446,7 @@ log_parser.add_argument("-i", "--item_id", help="Only blocks with the given item
 
 #remove command takes in two required arguments ('-i' and '-y') and one optional argument (-o)
 remove_parser = subparsers.add_parser("remove")
-remove_parser.add_argument("-i", "--item_id", required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
+remove_parser.add_argument("-i", "--item_id",type=int, required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
 remove_parser.add_argument("-y", "--reason", required=True, choices=["DISPOSED", "DESTROYED", "RELEASED"], help="Reason for the removal of the evidence item. Must be one of: DISPOSED, DESTROYED, or RELEASED. If the reason given is RELEASED, -o must also be given.")
 remove_parser.add_argument("-o", "--owner", help="Information about the lawful owner to whom the evidence was released. At this time, text is free-form and does not have any requirements.")
 
