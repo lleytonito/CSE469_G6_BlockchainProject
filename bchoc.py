@@ -328,7 +328,7 @@ def log_command(args):
                 #Get formatted time for the current block
                 dt = datetime.datetime.fromtimestamp(currentBlock[1], tz=datetime.timezone.utc)
                 formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-
+    
                 #A desired Case ID or Item ID is not specified, print the current block
                 if args.case_id is None and args.item_id is None:
                     print("Case:", currentBlock[2])
@@ -371,7 +371,7 @@ def log_command(args):
             formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
             #A desired Case ID or Item ID is not specified, print the current block
             if args.case_id is None and args.item_id is None:
-                print("Case:", currentBlock[2])
+                print("Case:", getCaseID(i))
                 print("Item:", currentBlock[3])
                 print("Action:", currentBlock[4])
                 print("Time:", formatted_time)    
@@ -382,11 +382,11 @@ def log_command(args):
 
                 #Checking for both Case ID and Item ID
                 if args.case_id and args.item_id:
-                    if(currentBlock[2] == args.case_id and currentBlock[3] == args.item_id):
+                    if(getCaseID(i) == args.case_id and currentBlock[3] == args.item_id):
                         canBeLogged = True
                 #Check for only looking for Case ID
                 elif args.case_id and args.item_id is None:
-                    if(currentBlock[2] == args.case_id):
+                    if(getCaseID(i) == args.case_id):
                         canBeLogged = True
                 #Check for only looking for Item ID
                 elif args.case_id is None and args.item_id:
@@ -394,7 +394,7 @@ def log_command(args):
                         canBeLogged = True
                     
                 if canBeLogged == True:
-                    print("Case:", currentBlock[2])
+                    print("Case:", getCaseID(i))
                     print("Item:", currentBlock[3])
                     print("Action:", currentBlock[4])
                     print("Time:", formatted_time)    
@@ -504,7 +504,7 @@ log_parser = subparsers.add_parser("log")
 log_parser.add_argument("-r", "--reverse", action="store_true", help="Reverses the order of the block entries to show the most recent entries first.")
 log_parser.add_argument("-n", "--num_entries", type=int, help="Shows number of block entries.")
 log_parser.add_argument("-c", "--case_id", help="Only blocks with the given case_id are returned.")
-log_parser.add_argument("-i", "--item_id", help="Only blocks with the given item_id are returned.")
+log_parser.add_argument("-i", "--item_id", type=int, help="Only blocks with the given item_id are returned.")
 
 #remove command takes in two required arguments ('-i' and '-y') and one optional argument (-o)
 remove_parser = subparsers.add_parser("remove")
