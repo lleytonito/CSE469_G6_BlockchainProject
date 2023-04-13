@@ -206,7 +206,8 @@ def getStatus(itemId):
     if lastIndex == -1:
         return None
 
-    return getState(i)
+    status = getState(i).strip('\x00')
+    return status
 
 
 ###################################################################################################
@@ -436,7 +437,6 @@ def remove_command(args):
         return
     
     status = getStatus(args.item_id) 
-    status = status.strip('\x00')
 
     if status != "CHECKEDIN":
         print(f"Item status is currently {status} and must be CHECKEDIN in order to be removed. Run checkin -i {args.item_id} and try again.")
