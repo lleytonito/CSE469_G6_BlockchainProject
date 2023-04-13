@@ -264,7 +264,48 @@ def checkout_command(args):
 
 #checkin command implementation
 def checkin_command(args):
-    print("Checkin Command\n Item ID:", args.item_id)
+    #print("Checkin Command\n Item ID:", args.item_id)
+    
+    offset = 0
+    
+    #check if the file specified by the check at the top of program exists
+    if (os.path.isfile(filepath)):
+
+        #if it does, open the file in read-binary mode
+        with open(filepath, 'rb') as file:
+
+            #create a bytearray to read in the file's data
+            existingBlocks = bytearray()
+            existingBlocks = file.read()
+
+            #check to see if the first block has a size greater than 0 (should be 14 if it is there)
+            bytesSize = existingBlocks[72:75]
+            size = (int.from_bytes(bytesSize, sys.byteorder))
+        
+            #if so, while the size of each block in the file is not 0
+            if (size != 0):
+                while (size != 0):
+
+                    #Read the block of given size from the file at the current offset the block from the file
+                    #at the current offset into the blockList array  
+                    unpackFromFile(existingBlocks, offset, size)
+                    
+                    #increment offset according to base size + size of data string at end of struct
+                    offset = offset + 75 + size
+                    
+                    #continue overwriting prevHex in order to get the hex of the most recent
+                    #element of the block
+                    hash = existingBlocks[offset:offset+75+size]
+                    hash_object = hashlib.sha256(hash)
+                    prevHex = hash_object.hexdigest()
+
+                    #get the new size for the next while loop check
+                    bytesSize = existingBlocks[offset+72:offset+75]
+                    size = (int.from_bytes(bytesSize, sys.byteorder))
+    # case:
+    # checked in item:
+    # status:
+    # time of action:
 
 #log command implementation
 def log_command(args):
