@@ -195,6 +195,20 @@ def getPrevHash():
     return hex_dig
    
 
+def getStatus(itemId):
+    itemIdList = getEvidenceIDArray()
+    lastIndex = -1
+    
+    for i in range(len(itemIdList)):
+        if itemIdList[i] == itemId:
+            lastIndex = i 
+
+    if lastIndex == -1:
+        return None
+
+    return getState(i)
+
+
 ###################################################################################################
 
 
@@ -298,6 +312,8 @@ def checkout_command(args):
 
 #checkin command implementation
 def checkin_command(args):
+    generateLists()
+    
     print("Checkin Command\n Item ID:", args.item_id)
 
 #log command implementation
@@ -331,7 +347,7 @@ def log_command(args):
     
                 #A desired Case ID or Item ID is not specified, print the current block
                 if args.case_id is None and args.item_id is None:
-                    print("Case:", currentBlock[2])
+                    print("Case:", getCaseID(i))
                     print("Item:", currentBlock[3])
                     print("Action:", currentBlock[4])
                     print("Time:", formatted_time)                   
@@ -342,11 +358,11 @@ def log_command(args):
 
                     #Checking for both Case ID and Item ID
                     if args.case_id and args.item_id:
-                        if(currentBlock[2] == args.case_id and currentBlock[3] == args.item_id):
+                        if(getCaseID(i) == args.case_id and currentBlock[3] == args.item_id):
                             canBeLogged = True
                     #Check for only looking for Case ID
                     elif args.case_id and args.item_id is None:
-                        if(currentBlock[2] == args.case_id):
+                        if(getCaseID(i) == args.case_id):
                             canBeLogged = True
                     #Check for only looking for Item ID
                     elif args.case_id is None and args.item_id:
@@ -354,7 +370,7 @@ def log_command(args):
                             canBeLogged = True
                     
                     if canBeLogged == True:
-                        print("Case:", currentBlock[2])
+                        print("Case:", getCaseID(i))
                         print("Item:", currentBlock[3])
                         print("Action:", currentBlock[4])
                         print("Time:", formatted_time)
@@ -419,7 +435,15 @@ def remove_command(args):
         print("Item ID Not Found. Please try an existing Item ID")
         return
     
+    status = getStatus(args.item_id) 
+    status = status.strip('\x00')
+
+    if status != "CHECKEDIN":
+        print(f"Item status is currently {status} and must be CHECKEDIN in order to be removed. Run checkin -i {args.item_id} and try again.")
+        return
+    
     caseId = getCaseID(matchingIndex)
+    formatted_case_id = caseId.replace('-', '')
     prevHash = getPrevHash()
     # Get the current timestamp in seconds
     timestamp = time.time()
@@ -428,14 +452,16 @@ def remove_command(args):
     # Format the datetime object as a string in the desired format
     formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
-    packFormatAll(True, prevHash, timestamp, caseId, args.item_id, args.reason, 'removing')
+
+    packFormatAll(True, prevHash, timestamp, formatted_case_id, args.item_id, args.reason, 'removing')
     print(f"Case: {caseId}")
     print(f"Removed Item: {args.item_id}")
     print(f" Status: {args.reason}")
     if args.owner:
-        print(f"Owner Info: {args.owner}")
-  
-  #TODO: can only dispose a checkedin item, write a checkState global function
+        print(f" Owner Info: {args.owner}")
+    print(f" Time of Action: {formatted_time}")
+
+ 
 
 
 #init command implementation
