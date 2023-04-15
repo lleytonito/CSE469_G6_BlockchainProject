@@ -206,7 +206,8 @@ def getStatus(itemId):
     if lastIndex == -1:
         return None
 
-    return getState(i)
+    status = getState(i).strip('\x00')
+    return status
 
 
 ###################################################################################################
@@ -272,25 +273,25 @@ def checkout_command(args):
     #Iterate through blockList to verify whether a block with the provided evidence id can be checked out
     i = 0
     canCheckOut = False
-    currentBlockFields = [] #Contains fields for the current block being accessed
-    matchingBlock = []      #Contains fields for a block that is matching based on the id provided by the argument
-    
     listLength = len(blockList)
+    matchingBlockIndex = 0
+    
     for i in range(listLength):
+        
+        #Check if the evidence id at the current block is what was provided as an argument
+        if getEvidenceID(i) == args.item_id: 
 
-        currentBlockFields = unpackFromList(i)  #Get information about current block to compare id with the argument provided
-        if currentBlockFields[3] == args.item_id:
-            
-            matchingBlock = currentBlockFields
             #Check if the matching block's status is checked in. If it is not, then it cannot be checked out
-            if currentBlockFields[4] == "CHECKEDIN":
+            if getState(i)[:9] == "CHECKEDIN":   
                 canCheckOut = True
+                matchingBlockIndex = i
             else:
                 canCheckOut = False
 
     if canCheckOut:
 
         #Output the Case ID, Evidence Item ID, Status, and Time of action
+        matchingBlock = unpackFromList(matchingBlockIndex)
         print("Case:", matchingBlock[2])                
         print("Checked out item:", matchingBlock[3])  
         print("  Status: CHECKEDOUT")
@@ -306,7 +307,6 @@ def checkout_command(args):
         
         #Adds the checkout entry to the chain of custody
         packFormatAll(True, prevHex, time.time(), matchingBlock[2], matchingBlock[3], 'CHECKEDOUT', matchingBlock[6])
-
     else:
         print("Error: Cannot check out a checked out item. Must check it in first.")
 
@@ -455,7 +455,6 @@ def remove_command(args):
         return
     
     status = getStatus(args.item_id) 
-    status = status.strip('\x00')
 
     if status != "CHECKEDIN":
         print(f"Item status is currently {status} and must be CHECKEDIN in order to be removed. Run checkin -i {args.item_id} and try again.")
