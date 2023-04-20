@@ -314,14 +314,12 @@ def checkout_command(args):
 def checkin_command(args):
     generateLists()
     
-    #print("Checkin Command\n Item ID:", args.item_id)
-    
     offset = 0
     
     i = 0
-    canCheckIn = False
+    checkin = False
     currentBlockFields = []
-    matchingBlock = []
+    matchingindex = 0
 
     lsitLength = len(blockList)
     for i in range(listLength):
@@ -329,7 +327,28 @@ def checkin_command(args):
         if currentBlockFields[3] == args.item_id:
             matchingBlock = currentBlockFields
             
-            if currentBlockFields[4] == "CHECKEDOUT"
+            if currentBlockFields[4] == "CHECKEDOUT":
+                checkin = True
+                matchingindex = i
+            else:
+                checkin = False
+
+    if checkin:
+        matchingBlock = unpackFromList(matchingindex)
+        print("Case:", matchingBlock[2])                
+        print("Checked out item:", matchingBlock[3])  
+        print("  Status: CHECKEDIN")
+
+        timestamp = time.time()
+        dt = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+        formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+        print("  Time of action:", formatted_time)
+        
+        #Adds the checkout entry to the chain of custody
+        packFormatAll(True, prevHex, time.time(), matchingBlock[2], matchingBlock[3], 'CHECKEDIN', matchingBlock[6])
+    else:
+        print("Item can not be checked in. Must be checked out first.")
     # case:
     # checked in item:
     # status:
@@ -521,7 +540,32 @@ def init_command():
 
 #verify command implementation
 def verify_command():
-    print("Verify Command")
+    generateLists()
+
+    global blockList
+
+    verified = False
+    errors = []
+
+    listSize = len(blockList)
+
+    currentBlock = unpackFromList(0)
+
+    for i in range(listSize):
+        currentBlock = unpackFromList(i)
+        prevHash = getPrevHash()
+        # ...
+
+    if verified == True:
+        print("Transactions in blockchain: " + listSize)
+        print("State of blockchain: CLEAN")
+    else:
+        print("Transactions in blockchain: " + listSize)
+        print("State of blockchain: ERROR")
+
+        #...
+
+
 
 #initialize parser with argparse
 parser = argparse.ArgumentParser()
