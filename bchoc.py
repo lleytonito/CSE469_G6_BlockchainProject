@@ -264,7 +264,7 @@ def add_command(args):
         # If the item is not in the block, add it to the block and print the required statement
         if item not in itemId:
             formatted_case_id = args.case_id.replace('-', '')
-            prevHex = packFormatAll(True, prevHex, time.time(), formatted_case_id, item, 'CHECKEDIN', 'adding')
+            prevHex = packFormatAll(True, prevHex, time.time(), formatted_case_id, item, b'CHECKEDIN\x00\x00', '')
             print(f'Added Item: {item}')
             print(' Status: CHECKEDIN')
             print(f' Time of Action: {formatted_time}')
@@ -328,7 +328,7 @@ def checkout_command(args):
     prevHex = getHash(matchingIndex)
     #Adds the checkout entry to the chain of custody
     formatted_case_id = getCaseID(currentStatus).replace('-', '')
-    packFormatAll(True, '', time.time(), formatted_case_id, args.item_id, 'CHECKEDOUT', getData(currentStatus))
+    packFormatAll(True, '', time.time(), formatted_case_id, args.item_id, b'CHECKEDOUT\x00\x00', '')
  
 
 #checkin command implementation
@@ -369,7 +369,7 @@ def checkin_command(args):
     prevHex = getHash(matchingIndex)
     #Adds the checkout entry to the chain of custody
     formatted_case_id = getCaseID(currentStatus).replace('-', '')
-    packFormatAll(True, '', time.time(), formatted_case_id, args.item_id, 'CHECKEDIN', getData(currentStatus))
+    packFormatAll(True, '', time.time(), formatted_case_id, args.item_id, b'CHECKEDIN\x00\x00', '')
 
 #log command implementation
 def log_command(args):
@@ -511,7 +511,7 @@ def remove_command(args):
     formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
 
-    packFormatAll(True, prevHash, timestamp, formatted_case_id, args.item_id, args.why, 'removing')
+    packFormatAll(True, '', timestamp, formatted_case_id, args.item_id, bytes(args.why) + b'\x00\x00', '')
     print(f"Case: {caseId}")
     print(f"Removed Item: {args.item_id}")
     print(f" Status: {args.why}")
@@ -548,7 +548,10 @@ def init_command():
                     size = (int.from_bytes(bytesSize, sys.byteorder))
             #if the file is empty for some reason, add the initial block as specified in instructions
             else:
-                packFormatAll(True, '', time.time(), '00000000000000000000000000000000', 0, 'INITIAL', b'Initial block\x00')
+                message = "Invalid blockchain file found: exiting program."
+                sys.stderr.write(message)
+                sys.exit(1)
+                #packFormatAll(True, '', time.time(), '00000000000000000000000000000000', 0, 'INITIAL', b'Initial block\x00')
             print('Blockchain file found with INITIAL block.')
 
     #if the file does not exist, create it and add the initial block as specified in instructions
