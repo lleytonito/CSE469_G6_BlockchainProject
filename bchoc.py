@@ -215,9 +215,8 @@ def getStatus(itemId):
             currentStatus = i
     if currentStatus == -1:
         return None
-    print(currentStatus)
     status = getState(currentStatus).strip('\x00')
-    print(status)
+ 
     return status
 
 
