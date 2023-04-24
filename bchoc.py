@@ -1,7 +1,8 @@
-import binascii
+#!/usr/bin/env python3
 import datetime
 import hashlib
 import struct
+import subprocess
 import sys
 import argparse
 import time
@@ -194,19 +195,31 @@ def getPrevHash():
     hex_dig = hash_object.hexdigest()
     return hex_dig
    
-
-def getStatus(itemId):
+def getStatusIndex(itemId):
+    currentStatus = -1
     itemIdList = getEvidenceIDArray()
-    lastIndex = -1
-    
     for i in range(len(itemIdList)):
         if itemIdList[i] == itemId:
-            lastIndex = i 
+            currentStatus = i
 
-    if lastIndex == -1:
+    if currentStatus == -1:
         return None
 
-    status = getState(i).strip('\x00')
+    return currentStatus
+
+def getStatus(itemId):
+    currentStatus = -1
+    itemIdList = getEvidenceIDArray()
+    for i in range(len(itemIdList)):
+        if itemIdList[i] == itemId:
+            print("hello")
+            currentStatus = i
+
+    if currentStatus == -1:
+        return None
+    print(currentStatus)
+    status = getState(currentStatus).strip('\x00')
+    print(status)
     return status
 
 
@@ -219,12 +232,12 @@ def add_command(args):
     try:
         uuid.UUID(args.case_id)
     except ValueError:
-        print("Invalid UUID for case ID")
-        return
+        message = "Invalid UUID for case ID"
+        sys.stderr.write(message)
+        sys.exit(1)
     
     if not os.path.isfile(filepath):
-        print('Blockchain file not found. Please run init command to initialize the block.')
-        return
+        init_command()
 
     generateLists()
     prevHex = getPrevHash()
@@ -250,12 +263,10 @@ def add_command(args):
             print(f' Time of Action: {formatted_time}')
         # Else, do not add item to the block
         else :
-            print(f'{item} is already in the block and will not be added.')
-
-
-    generateLists()
-    itemId = getEvidenceIDArray()
-    print(f'Evidence IDs in the block: {itemId}')
+            message = f'{item} is already in the block and will not be added.'
+            sys.stderr.write(message)
+            sys.exit(1)
+             
     
 #Add a new checkout entry to the chain of custody for the given evidence item. Checkout actions may only be 
 #performed on evidence items that have already been added to the blockchain.
@@ -263,96 +274,96 @@ def checkout_command(args):
     
     #Check if the file specified by the datapath exists
     if not os.path.isfile(filepath):
-        print('Blockchain file not found. Please run init command to initialize the block.')
-        return
+        message = 'Blockchain file not found. Please run init command to initialize the block.'
+        sys.stderr.write(message)
+        raise subprocess.CalledProcessError(1, message)
     
     #Get the list of blocks read from the file as well as the hash of the last block currently in the list
     generateLists()
     prevHex = getPrevHash()
 
-    #Iterate through blockList to verify whether a block with the provided evidence id can be checked out
-    i = 0
-    canCheckOut = False
-    listLength = len(blockList)
-    matchingBlockIndex = 0
+    itemId = getEvidenceIDArray()
     
-    for i in range(listLength):
+    matchingIndex = None
+    for i,element in enumerate(itemId):
+        if element == args.item_id:
+            matchingIndex = i
+            break
+
+    if matchingIndex is None:
+        message = "Item ID Not Found. Please try an existing Item ID"
+        sys.stderr.write(message)
+        sys.exit(1)
+
+    status = getStatus(args.item_id) 
+    currentStatus = getStatusIndex(args.item_id)
+    
+
+    if status != "CHECKEDIN":
+        message = f"Item status is currently {status} and must be CHECKEDIN in order to be checked out. Run checkin -i {args.item_id} and try again."
+        sys.stderr.write(message)
+        sys.exit(1)
+
+
+
+    #Output the Case ID, Evidence Item ID, Status, and Time of action
+    print("Case:", getCaseID(currentStatus))                
+    print("Checked out item:", args.item_id)  
+    print("  Status: CHECKEDOUT")
+
+    # Get the current timestamp in seconds
+    timestamp = time.time()
+    # Convert the timestamp to a datetime object in UTC timezone
+    dt = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+    # Format the datetime object as a string in the desired format
+    formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+    print("  Time of action:", formatted_time)
         
-        #Check if the evidence id at the current block is what was provided as an argument
-        if getEvidenceID(i) == args.item_id: 
-
-            #Check if the matching block's status is checked in. If it is not, then it cannot be checked out
-            if getState(i)[:9] == "CHECKEDIN":   
-                canCheckOut = True
-                matchingBlockIndex = i
-            else:
-                canCheckOut = False
-
-    if canCheckOut:
-
-        #Output the Case ID, Evidence Item ID, Status, and Time of action
-        matchingBlock = unpackFromList(matchingBlockIndex)
-        print("Case:", matchingBlock[2])                
-        print("Checked out item:", matchingBlock[3])  
-        print("  Status: CHECKEDOUT")
-
-        # Get the current timestamp in seconds
-        timestamp = time.time()
-        # Convert the timestamp to a datetime object in UTC timezone
-        dt = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
-        # Format the datetime object as a string in the desired format
-        formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-
-        print("  Time of action:", formatted_time)
-        
-        #Adds the checkout entry to the chain of custody
-        packFormatAll(True, prevHex, time.time(), matchingBlock[2], matchingBlock[3], 'CHECKEDOUT', matchingBlock[6])
-    else:
-        print("Error: Cannot check out a checked out item. Must check it in first.")
+    #Adds the checkout entry to the chain of custody
+    formatted_case_id = getCaseID(currentStatus).replace('-', '')
+    packFormatAll(True, prevHex, time.time(), formatted_case_id, args.item_id, 'CHECKEDOUT', getData(currentStatus))
+ 
 
 #checkin command implementation
 def checkin_command(args):
     generateLists()
+    prevHex = getPrevHash()
+
+    itemId = getEvidenceIDArray()
     
-    offset = 0
-    
-    i = 0
-    checkin = False
-    currentBlockFields = []
-    matchingindex = 0
+    matchingIndex = None
+    for i,element in enumerate(itemId):
+        if element == args.item_id:
+            matchingIndex = i
+            break
 
-    lsitLength = len(blockList)
-    for i in range(listLength):
-        currentBlockFields = unpackFromList(i)
-        if currentBlockFields[3] == args.item_id:
-            matchingBlock = currentBlockFields
-            
-            if currentBlockFields[4] == "CHECKEDOUT":
-                checkin = True
-                matchingindex = i
-            else:
-                checkin = False
+    if matchingIndex is None:
+        message = "Item ID Not Found. Please try an existing Item ID"
+        sys.stderr.write("Item ID Not Found. Please try an existing Item ID")
+        sys.exit(1)
 
-    if checkin:
-        matchingBlock = unpackFromList(matchingindex)
-        print("Case:", matchingBlock[2])                
-        print("Checked out item:", matchingBlock[3])  
-        print("  Status: CHECKEDIN")
+    status = getStatus(args.item_id) 
+    currentStatus = getStatusIndex(args.item_id)
 
-        timestamp = time.time()
-        dt = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
-        formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    if status != "CHECKEDOUT":
+        message = f"Item status is currently {status} and must be CHECKEDOUT in order to be checked in. Run checkout -i {args.item_id} and try again."
+        sys.stderr.write(message)
+        sys.exit(1)
 
-        print("  Time of action:", formatted_time)
+    print("Case:", getCaseID(currentStatus))                
+    print("Checked out item:", args.item_id)  
+    print("  Status: CHECKEDIN")
+
+    timestamp = time.time()
+    dt = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
+    formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+
+    print("  Time of action:", formatted_time)
         
-        #Adds the checkout entry to the chain of custody
-        packFormatAll(True, prevHex, time.time(), matchingBlock[2], matchingBlock[3], 'CHECKEDIN', matchingBlock[6])
-    else:
-        print("Item can not be checked in. Must be checked out first.")
-    # case:
-    # checked in item:
-    # status:
-    # time of action:
+    #Adds the checkout entry to the chain of custody
+    formatted_case_id = getCaseID(currentStatus).replace('-', '')
+    packFormatAll(True, prevHex, time.time(), formatted_case_id, args.item_id, 'CHECKEDIN', getData(currentStatus))
 
 #log command implementation
 def log_command(args):
@@ -458,8 +469,10 @@ def log_command(args):
 def remove_command(args):    
     #error handling for -y flag (RELEASED argument without an owner)
     if args.reason == "RELEASED" and not args.owner:
-        print("If the reason for removal is RELEASED, an owner must be provided")
-        return
+        message = "If the reason for removal is RELEASED, an owner must be provided"
+        sys.stderr.write(message)
+        sys.exit(1)
+
     generateLists()
     itemId = getEvidenceIDArray()
     
@@ -470,14 +483,16 @@ def remove_command(args):
             break
 
     if matchingIndex is None:
-        print("Item ID Not Found. Please try an existing Item ID")
-        return
+        message = "Item ID Not Found. Please try an existing Item ID"
+        sys.stderr.write(message)
+        sys.exit(1)
     
     status = getStatus(args.item_id) 
 
     if status != "CHECKEDIN":
-        print(f"Item status is currently {status} and must be CHECKEDIN in order to be removed. Run checkin -i {args.item_id} and try again.")
-        return
+        message = f"Item status is currently {status} and must be CHECKEDIN in order to be removed. Run checkin -i {args.item_id} and try again."
+        sys.stderr.write(message)
+        sys.exit(1)
     
     caseId = getCaseID(matchingIndex)
     formatted_case_id = caseId.replace('-', '')
@@ -527,13 +542,13 @@ def init_command():
                     size = (int.from_bytes(bytesSize, sys.byteorder))
             #if the file is empty for some reason, add the initial block as specified in instructions
             else:
-                initialBlock = packFormatAll(True, '', time.time(), '00000000000000000000000000000000', 0, 'INITIAL', 'Initial Block')
+                packFormatAll(True, '', 0, '00000000000000000000000000000000', 0, 'INITIAL', 'Initial Block')
             print('Blockchain file found with INITIAL block.')
 
     #if the file does not exist, create it and add the initial block as specified in instructions
     else:
-        bcFile = open(filepath, 'wb')
-        initialBlock = packFormatAll(True, '', time.time(), '', 0, 'INITIAL', 'Initial Block')
+        open(filepath, 'wb')
+        packFormatAll(True, '', time.time(), '', 0, 'INITIAL', 'Initial Block')
         print('Blockchain file not found. Created INITIAL block.')
 
     writeToFile()
@@ -598,7 +613,7 @@ log_parser.add_argument("-i", "--item_id", type=int, help="Only blocks with the 
 remove_parser = subparsers.add_parser("remove")
 remove_parser.add_argument("-i", "--item_id",type=int, required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
 remove_parser.add_argument("-y", "--reason", required=True, choices=["DISPOSED", "DESTROYED", "RELEASED"], help="Reason for the removal of the evidence item. Must be one of: DISPOSED, DESTROYED, or RELEASED. If the reason given is RELEASED, -o must also be given.")
-remove_parser.add_argument("-o", "--owner", help="Information about the lawful owner to whom the evidence was released. At this time, text is free-form and does not have any requirements.")
+remove_parser.add_argument("-o", "--owner", nargs='+', help="Information about the lawful owner to whom the evidence was released. At this time, text is free-form and does not have any requirements.")
 
 #init command takes no arguments
 init_parser = subparsers.add_parser("init")
