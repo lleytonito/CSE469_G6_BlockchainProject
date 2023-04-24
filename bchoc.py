@@ -24,7 +24,10 @@ blockList = []
 #First input is boolean True or False for whether the new object should be written to the file. Should be True in most cases
 def packFormatAll(writeToFile, prevHash, time, caseID, evidenceID, state, data):
     #get length of data to calculate size
-    dataLength = len(data.encode('utf-8'))
+    if (isinstance(data, str)):
+        dataLength = len(data.encode('utf-8'))
+    else:
+        dataLength = len(data)
     #define new format using size of the data as the last string field's length
     currentBlockFormat = packFormatHeader + ' ' + str(dataLength) + 's'
     #append the new format to formatList
@@ -32,12 +35,19 @@ def packFormatAll(writeToFile, prevHash, time, caseID, evidenceID, state, data):
 
     #hex to bytes
     byteHex = bytes.fromhex(prevHash)
-
+    
     #data to utf-8 bytes
-    byteData = data.encode()
+    if (isinstance(data, str)):
+        byteData = data.encode()
+    else:
+        byteData = data
+
+    byteArrayCaseID = bytearray.fromhex((caseID))
+    byteArrayReversedCaseID = reversed(byteArrayCaseID)
+    bytesCaseID = bytes(byteArrayReversedCaseID)
 
     #create a new byte struct of the specified format, and append it to blockList. also return in case it needs immediate use
-    newBlock = struct.pack(currentBlockFormat, byteHex, time, bytes.fromhex(caseID), evidenceID, bytes(state, 'utf-8'), dataLength, byteData)
+    newBlock = struct.pack(currentBlockFormat, byteHex, time, bytesCaseID, evidenceID, bytes(state, 'utf-8'), dataLength, byteData)
     blockList.append(newBlock)
     if (writeToFile):
         fileToWrite = open(filepath, 'ab')
@@ -262,8 +272,7 @@ def add_command(args):
         else :
             message = f'{item} is already in the block and will not be added.'
             sys.stderr.write(message)
-            sys.exit(1)
-             
+            sys.exit(1)             
     
 #Add a new checkout entry to the chain of custody for the given evidence item. Checkout actions may only be 
 #performed on evidence items that have already been added to the blockchain.
@@ -319,7 +328,7 @@ def checkout_command(args):
     prevHex = getHash(matchingIndex)
     #Adds the checkout entry to the chain of custody
     formatted_case_id = getCaseID(currentStatus).replace('-', '')
-    packFormatAll(True, prevHex, time.time(), formatted_case_id, args.item_id, 'CHECKEDOUT', getData(currentStatus))
+    packFormatAll(True, '', time.time(), formatted_case_id, args.item_id, 'CHECKEDOUT', getData(currentStatus))
  
 
 #checkin command implementation
@@ -360,7 +369,7 @@ def checkin_command(args):
     prevHex = getHash(matchingIndex)
     #Adds the checkout entry to the chain of custody
     formatted_case_id = getCaseID(currentStatus).replace('-', '')
-    packFormatAll(True, prevHex, time.time(), formatted_case_id, args.item_id, 'CHECKEDIN', getData(currentStatus))
+    packFormatAll(True, '', time.time(), formatted_case_id, args.item_id, 'CHECKEDIN', getData(currentStatus))
 
 #log command implementation
 def log_command(args):
@@ -539,13 +548,13 @@ def init_command():
                     size = (int.from_bytes(bytesSize, sys.byteorder))
             #if the file is empty for some reason, add the initial block as specified in instructions
             else:
-                packFormatAll(True, '', 0, '00000000000000000000000000000000', 0, 'INITIAL', 'Initial Block')
+                packFormatAll(True, '', time.time(), '00000000000000000000000000000000', 0, 'INITIAL', b'Initial block\x00')
             print('Blockchain file found with INITIAL block.')
 
     #if the file does not exist, create it and add the initial block as specified in instructions
     else:
         open(filepath, 'wb')
-        packFormatAll(True, '', time.time(), '', 0, 'INITIAL', 'Initial Block')
+        packFormatAll(True, '', time.time(), '', 0, 'INITIAL', b'Initial block\x00')
         print('Blockchain file not found. Created INITIAL block.')
 
     writeToFile()
