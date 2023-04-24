@@ -570,6 +570,7 @@ def verify_command():
 
     verified = False
     errors = []
+    parents = []
 
     listSize = len(blockList)
 
@@ -577,7 +578,28 @@ def verify_command():
 
     for i in range(listSize):
         currentBlock = unpackFromList(i)
-        prevHash = getPrevHash()
+        currentHash = getCurrentHash(i)
+        currentVerified = False
+        if (currentHash != '0'):
+            for j in range(listSize):
+                if (currentHash == getHash(j)):
+                    currentVerified = True
+                    parents.append(getHash(j))
+            if (currentVerified == False):
+                print("Transactions in blockchain: " + listSize)
+                print("State of blockchain: ERROR") 
+                print("Bad block: " + getHash(i))
+                print("Parent block: NOT FOUND")
+
+    for i in range(parents):
+        for j in range(parents):
+            if ((i != j) and (parents[i] == parents[j])):
+                print("Transactions in blockchain: " + listSize)
+                print("State of blockchain: ERROR") 
+                print("Bad block: " + getHash(i))
+                print("Parent block: "+ parents[i]) 
+                print("Two blocks were found with the same parent.")
+                break
         # ...
 
     if verified == True:
