@@ -277,7 +277,6 @@ def checkout_command(args):
     
     #Get the list of blocks read from the file as well as the hash of the last block currently in the list
     generateLists()
-    prevHex = getPrevHash()
 
     itemId = getEvidenceIDArray()
     
@@ -317,6 +316,7 @@ def checkout_command(args):
 
     print("  Time of action:", formatted_time)
         
+    prevHex = getHash(matchingIndex)
     #Adds the checkout entry to the chain of custody
     formatted_case_id = getCaseID(currentStatus).replace('-', '')
     packFormatAll(True, prevHex, time.time(), formatted_case_id, args.item_id, 'CHECKEDOUT', getData(currentStatus))
@@ -325,7 +325,7 @@ def checkout_command(args):
 #checkin command implementation
 def checkin_command(args):
     generateLists()
-    prevHex = getPrevHash()
+    
 
     itemId = getEvidenceIDArray()
     
@@ -357,7 +357,7 @@ def checkin_command(args):
     formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
     print("  Time of action:", formatted_time)
-        
+    prevHex = getHash(matchingIndex)
     #Adds the checkout entry to the chain of custody
     formatted_case_id = getCaseID(currentStatus).replace('-', '')
     packFormatAll(True, prevHex, time.time(), formatted_case_id, args.item_id, 'CHECKEDIN', getData(currentStatus))
@@ -493,7 +493,7 @@ def remove_command(args):
     
     caseId = getCaseID(matchingIndex)
     formatted_case_id = caseId.replace('-', '')
-    prevHash = getPrevHash()
+    prevHash = getHash(matchingIndex)
     # Get the current timestamp in seconds
     timestamp = time.time()
     # Convert the timestamp to a datetime object in UTC timezone
