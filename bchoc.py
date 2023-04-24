@@ -212,9 +212,7 @@ def getStatus(itemId):
     itemIdList = getEvidenceIDArray()
     for i in range(len(itemIdList)):
         if itemIdList[i] == itemId:
-            print("hello")
             currentStatus = i
-
     if currentStatus == -1:
         return None
     print(currentStatus)
