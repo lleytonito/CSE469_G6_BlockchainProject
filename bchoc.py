@@ -468,7 +468,7 @@ def log_command(args):
 #remove command implementation
 def remove_command(args):    
     #error handling for -y flag (RELEASED argument without an owner)
-    if args.reason == "RELEASED" and not args.owner:
+    if args.why == "RELEASED" and not args.owner:
         message = "If the reason for removal is RELEASED, an owner must be provided"
         sys.stderr.write(message)
         sys.exit(1)
@@ -505,10 +505,10 @@ def remove_command(args):
     formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
 
-    packFormatAll(True, prevHash, timestamp, formatted_case_id, args.item_id, args.reason, 'removing')
+    packFormatAll(True, prevHash, timestamp, formatted_case_id, args.item_id, args.why, 'removing')
     print(f"Case: {caseId}")
     print(f"Removed Item: {args.item_id}")
-    print(f" Status: {args.reason}")
+    print(f" Status: {args.why}")
     if args.owner:
         print(f" Owner Info: {args.owner}")
     print(f" Time of Action: {formatted_time}")
@@ -612,7 +612,7 @@ log_parser.add_argument("-i", "--item_id", type=int, help="Only blocks with the 
 #remove command takes in two required arguments ('-i' and '-y') and one optional argument (-o)
 remove_parser = subparsers.add_parser("remove")
 remove_parser.add_argument("-i", "--item_id",type=int, required=True, help="Specifies the evidence item’s identifier. The item ID must be unique within the blockchain. This means you cannot re-add an evidence item once the remove action has been performed on it.")
-remove_parser.add_argument("-y", "--reason", required=True, choices=["DISPOSED", "DESTROYED", "RELEASED"], help="Reason for the removal of the evidence item. Must be one of: DISPOSED, DESTROYED, or RELEASED. If the reason given is RELEASED, -o must also be given.")
+remove_parser.add_argument("-y", "--why", required=True, choices=["DISPOSED", "DESTROYED", "RELEASED"], help="Reason for the removal of the evidence item. Must be one of: DISPOSED, DESTROYED, or RELEASED. If the reason given is RELEASED, -o must also be given.")
 remove_parser.add_argument("-o", "--owner", nargs='+', help="Information about the lawful owner to whom the evidence was released. At this time, text is free-form and does not have any requirements.")
 
 #init command takes no arguments
