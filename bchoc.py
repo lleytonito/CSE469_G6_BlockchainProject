@@ -252,7 +252,6 @@ def add_command(args):
         init_command()
 
     generateLists()
-    print(blockList)
 
     prevHex = getPrevHash()
     itemId = getEvidenceIDArray()
