@@ -517,7 +517,7 @@ def remove_command(args):
     formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
 
-    packFormatAll(True, '', timestamp, formatted_case_id, args.item_id, args.why.encode() + b'\x00\x00', '')
+    packFormatAll(True, '', timestamp, formatted_case_id, args.item_id, args.why.encode() + b'\x00', args.owner.encode() + b'\x00')
     print(f"Case: {caseId}")
     print(f"Removed Item: {args.item_id}")
     print(f" Status: {args.why}")
@@ -602,7 +602,7 @@ def verify_command():
                 print("Bad block: " + getHash(i))
                 print("Parent block: "+ parents[i]) 
                 print("Two blocks were found with the same parent.")
-                break
+                sys.exit(0)
         # ...
 
     if verified == True:
