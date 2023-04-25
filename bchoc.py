@@ -42,12 +42,17 @@ def packFormatAll(writeToFile, prevHash, time, caseID, evidenceID, state, data):
     else:
         byteData = data
 
+    if (isinstance(state, str)):
+        byteState = state.encode()
+    else:
+        byteState = state
+
     byteArrayCaseID = bytearray.fromhex((caseID))
     byteArrayReversedCaseID = reversed(byteArrayCaseID)
     bytesCaseID = bytes(byteArrayReversedCaseID)
 
     #create a new byte struct of the specified format, and append it to blockList. also return in case it needs immediate use
-    newBlock = struct.pack(currentBlockFormat, byteHex, time, bytesCaseID, evidenceID, bytes(state, 'utf-8'), dataLength, byteData)
+    newBlock = struct.pack(currentBlockFormat, byteHex, time, bytesCaseID, evidenceID, byteState, dataLength, byteData)
     blockList.append(newBlock)
     if (writeToFile):
         fileToWrite = open(filepath, 'ab')
