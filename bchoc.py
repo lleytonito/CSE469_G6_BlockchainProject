@@ -139,7 +139,7 @@ def generateLists():
         size = (int.from_bytes(bytesSize, sys.byteorder))
         #if so, while the size of each block in the file is not 0
         if (size != 0):
-            while (size != 0):
+            while (offset < len(existingBlocks)):
                 #read the block from the file at the current offset into our arrays that store data structures
                 unpackFromFile(existingBlocks, offset, size)
                 #increment offset according to base size + size of data string at end of struct
@@ -252,6 +252,8 @@ def add_command(args):
         init_command()
 
     generateLists()
+    print(blockList)
+
     prevHex = getPrevHash()
     itemId = getEvidenceIDArray()
    
