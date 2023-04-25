@@ -611,6 +611,7 @@ def verify_command():
     else:
         print("Transactions in blockchain: " + str(listSize))
         print("State of blockchain: ERROR")
+        sys.exit(1)
 
         #...
 
