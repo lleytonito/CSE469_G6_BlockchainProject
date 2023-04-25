@@ -410,7 +410,7 @@ def log_command(args):
                 if args.case_id is None and args.item_id is None:
                     print("Case:", getCaseID(i))
                     print("Item:", currentBlock[3])
-                    print("Action:", currentBlock[4])
+                    print("Action:", currentBlock[4].strip('\x00'))
                     print("Time:", formatted_time)                   
                     print("")
                     numEntries += 1 #The number of logged blocks has increased
@@ -433,7 +433,7 @@ def log_command(args):
                     if canBeLogged == True:
                         print("Case:", getCaseID(i))
                         print("Item:", currentBlock[3])
-                        print("Action:", currentBlock[4])
+                        print("Action:", currentBlock[4].strip('\x00'))
                         print("Time:", formatted_time)
                         print("")
                         numEntries += 1 #The number of logged blocks has increased
@@ -450,7 +450,7 @@ def log_command(args):
             if args.case_id is None and args.item_id is None:
                 print("Case:", getCaseID(i))
                 print("Item:", currentBlock[3])
-                print("Action:", currentBlock[4])
+                print("Action:", currentBlock[4].strip('\x00'))
                 print("Time:", formatted_time)    
                 print("")
                 numEntries += 1 #The number of logged blocks has increased
@@ -473,7 +473,7 @@ def log_command(args):
                 if canBeLogged == True:
                     print("Case:", getCaseID(i))
                     print("Item:", currentBlock[3])
-                    print("Action:", currentBlock[4])
+                    print("Action:", currentBlock[4].strip('\x00'))
                     print("Time:", formatted_time)    
                     print("")
 
@@ -611,6 +611,7 @@ def verify_command():
     else:
         print("Transactions in blockchain: " + str(listSize))
         print("State of blockchain: ERROR")
+        sys.exit(1)
 
         #...
 
