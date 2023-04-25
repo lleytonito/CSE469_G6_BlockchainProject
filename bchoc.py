@@ -516,8 +516,11 @@ def remove_command(args):
     # Format the datetime object as a string in the desired format
     formatted_time = dt.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
-
-    packFormatAll(True, '', timestamp, formatted_case_id, args.item_id, args.why.encode() + b'\x00\x00', '')
+    if args.owner:
+        ownerOutput = ' '.join(args.owner)
+        packFormatAll(True, '', timestamp, formatted_case_id, args.item_id, args.why.encode(), ownerOutput+'\x00')
+    else:
+        packFormatAll(True, '', timestamp, formatted_case_id, args.item_id, args.why.encode() + b'\x00', '')
     print(f"Case: {caseId}")
     print(f"Removed Item: {args.item_id}")
     print(f" Status: {args.why}")
