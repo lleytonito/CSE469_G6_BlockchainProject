@@ -577,7 +577,7 @@ def verify_command():
 
     global blockList
 
-    verified = False
+    verified = True
     errors = []
     parents = []
 
