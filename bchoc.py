@@ -597,7 +597,7 @@ def verify_command():
                 print("State of blockchain: ERROR") 
                 print("Bad block: " + getHash(i))
                 print("Parent block: NOT FOUND")
-                sys.exit(0)
+                
 
     for i in range(len(parents)):
         for j in range(len(parents)):
@@ -608,7 +608,7 @@ def verify_command():
                 print("Bad block: " + getHash(i))
                 print("Parent block: "+ parents[i]) 
                 print("Two blocks were found with the same parent.")
-                sys.exit(0)
+                
         # ...
 
     if verified == True:
