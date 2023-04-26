@@ -592,14 +592,17 @@ def verify_command():
                     currentVerified = True
                     parents.append(getHash(j))
             if (currentVerified == False):
+                verified = False
                 print("Transactions in blockchain: " + str(listSize))
                 print("State of blockchain: ERROR") 
                 print("Bad block: " + getHash(i))
                 print("Parent block: NOT FOUND")
+                sys.exit(0)
 
     for i in range(len(parents)):
         for j in range(len(parents)):
             if ((i != j) and (parents[i] == parents[j])):
+                verified = False
                 print("Transactions in blockchain: " + str(listSize))
                 print("State of blockchain: ERROR") 
                 print("Bad block: " + getHash(i))
